@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corrigés — Karambig Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #F5F5F5; }
+    .nav { background: #1B5E20; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .nav h1 { color: white; font-size: 20px; }
+    .nav a { color: #F9A825; text-decoration: none; }
+    .menu { background: #2E7D32; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .menu a { color: white; text-decoration: none; padding: 6px 16px; border-radius: 20px; font-size: 14px; }
+    .menu a:hover, .menu a.active { background: #F9A825; color: #1B5E20; font-weight: bold; }
+    .content { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .section h2 { color: #1B5E20; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #F9A825; padding-bottom: 8px; }
+    label { display: block; font-size: 13px; color: #424242; margin-bottom: 4px; margin-top: 12px; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+    textarea { height: 120px; resize: vertical; }
+    .counter { font-size: 12px; color: #757575; text-align: right; margin-top: 4px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
+    .btn-green { background: #1B5E20; color: white; }
+    .btn-red { background: #B71C1C; color: white; }
+    .btn-orange { background: #F9A825; color: #1B5E20; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #1B5E20; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #eee; }
+    tr:hover { background: #F5F5F5; }
+    .sms-preview { font-family: monospace; font-size: 12px; max-width: 280px; word-break: break-word; }
+    .msg { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+    .msg-success { background: #E8F5E9; color: #1B5E20; }
+    .msg-error { background: #FFEBEE; color: #B71C1C; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <h1>★ Karambig Roogo — Administration</h1>
+    <a href="/admin/logout">Déconnexion</a>
+  </nav>
+  <div class="menu">
+    <a href="/admin/dashboard">Tableau de bord</a>
+    <a href="/admin/niveaux">Niveaux</a>
+    <a href="/admin/matieres">Matières</a>
+    <a href="/admin/cours">Cours</a>
+    <a href="/admin/corriges" class="active">Corrigés</a>
+    <a href="/admin/questions">Questions SMS</a>
+  </div>
+  <div class="content">
+    <div id="msg"></div>
+    <div class="section">
+      <h2 id="formTitle">Ajouter un corrigé / sujet</h2>
+      <input type="hidden" id="editId">
+      <div class="row">
+        <div>
+          <label>Titre *</label>
+          <input type="text" id="titre" placeholder="Ex: Examen final Informatique L2 2024">
+        </div>
+        <div>
+          <label>Matière *</label>
+          <select id="matiere_id"><option value="">-- Choisir --</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Niveau *</label>
+          <select id="niveau_id"><option value="">-- Choisir --</option></select>
+        </div>
+        <div>
+          <label>Type *</label>
+          <select id="type">
+            <option value="examen_final">Examen final</option>
+            <option value="partiel_td">Partiel / TD</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label>Année</label>
+        <input type="number" id="annee" placeholder="Ex: 2024" min="2000" max="2099">
+      </div>
+      <label>Version SMS * <small style="color:#F9A825">(max 800 caractères)</small></label>
+      <textarea id="version_sms" placeholder="Résumé du corrigé pour envoi SMS..." oninput="updateCounter()"></textarea>
+      <div class="counter"><span id="counter">0</span> / 800 caractères</div>
+      <div style="display:flex;gap:12px;margin-top:16px">
+        <button class="btn btn-green" onclick="saveSujet()">Enregistrer</button>
+        <button class="btn btn-orange" onclick="resetForm()">Annuler</button>
+      </div>
+    </div>
+    <div class="section">
+      <h2>Liste des corrigés (<span id="total">0</span>)</h2>
+      <table>
+        <thead><tr><th>Titre</th><th>Matière</th><th>Niveau</th><th>Type</th><th>Année</th><th>Consultations</th><th>Version SMS</th><th>Actions</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    let matieres = [], niveaux = [], sujets = [];
+    async function init() {
+      matieres = await fetch('/admin/api/matieres').then(r => r.json());
+      niveaux  = await fetch('/admin/api/niveaux').then(r => r.json());
+      const selM = document.getElementById('matiere_id');
+      const selN = document.getElementById('niveau_id');
+      matieres.forEach(m => selM.innerHTML += `<option value="${m.id}">${m.libelle}</option>`);
+      niveaux.forEach(n  => selN.innerHTML += `<option value="${n.id}">${n.libelle}</option>`);
+      await loadSujets();
+    }
+    async function loadSujets() {
+      sujets = await fetch('/admin/api/sujets').then(r => r.json());
+      document.getElementById('total').textContent = sujets.length;
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = sujets.map(s => `
+        <tr>
+          <td><b>${s.titre}</b></td>
+          <td>${s.matiere}</td>
+          <td>${s.niveau}</td>
+          <td>${s.type === 'examen_final' ? 'Examen final' : 'Partiel/TD'}</td>
+          <td>${s.annee || '-'}</td>
+          <td>${s.nombre_consultations}</td>
+          <td><div class="sms-preview">${s.version_sms ? s.version_sms.substring(0,80)+'...' : 'Non définie'}</div></td>
+          <td>
+            <button class="btn btn-orange" style="margin-bottom:4px" onclick="editSujet('${s.id}')">Modifier</button><br>
+            <button class="btn btn-red" onclick="deleteSujet('${s.id}')">Supprimer</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+    function updateCounter() {
+      const v = document.getElementById('version_sms').value;
+      const c = document.getElementById('counter');
+      c.textContent = v.length;
+      c.style.color = v.length > 800 ? '#B71C1C' : '#1B5E20';
+    }
+    function editSujet(id) {
+      const s = sujets.find(x => x.id === id);
+      document.getElementById('editId').value     = id;
+      document.getElementById('titre').value       = s.titre;
+      document.getElementById('matiere_id').value  = s.matiere_id;
+      document.getElementById('niveau_id').value   = s.niveau_id;
+      document.getElementById('type').value         = s.type;
+      document.getElementById('annee').value        = s.annee || '';
+      document.getElementById('version_sms').value  = s.version_sms || '';
+      document.getElementById('formTitle').textContent = 'Modifier le corrigé';
+      updateCounter(); window.scrollTo(0, 0);
+    }
+    function resetForm() {
+      ['editId','titre','annee','version_sms'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('matiere_id').value = '';
+      document.getElementById('niveau_id').value  = '';
+      document.getElementById('formTitle').textContent = 'Ajouter un corrigé / sujet';
+      updateCounter();
+    }
+    function showMsg(text, type) {
+      const d = document.getElementById('msg');
+      d.innerHTML = `<div class="msg msg-${type}">${text}</div>`;
+      setTimeout(() => d.innerHTML = '', 4000);
+    }
+    async function saveSujet() {
+      const id = document.getElementById('editId').value;
+      const body = {
+        titre:       document.getElementById('titre').value,
+        matiere_id:  document.getElementById('matiere_id').value,
+        niveau_id:   document.getElementById('niveau_id').value,
+        type:        document.getElementById('type').value,
+        annee:       document.getElementById('annee').value,
+        version_sms: document.getElementById('version_sms').value,
+        statut: 'valide', actif: true
+      };
+      if (!body.titre || !body.matiere_id || !body.niveau_id || !body.version_sms) {
+        showMsg('Tous les champs obligatoires doivent être remplis.', 'error'); return;
+      }
+      if (body.version_sms.length > 800) {
+        showMsg('La version SMS ne doit pas dépasser 800 caractères.', 'error'); return;
+      }
+      const method = id ? 'PUT' : 'POST';
+      const url    = id ? `/admin/api/sujets/${id}` : '/admin/api/sujets';
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await r.json();
+      if (data.error) { showMsg(data.error, 'error'); return; }
+      showMsg(id ? 'Corrigé modifié.' : 'Corrigé ajouté.', 'success');
+      resetForm(); await loadSujets();
+    }
+    async function deleteSujet(id) {
+      if (!confirm('Supprimer ce corrigé ?')) return;
+      await fetch(`/admin/api/sujets/${id}`, { method: 'DELETE' });
+      showMsg('Corrigé supprimé.', 'success'); await loadSujets();
+    }
+    init();
+  </script>
+</body>
+</html>

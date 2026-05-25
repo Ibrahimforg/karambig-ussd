@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Questions SMS — Karambig Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #F5F5F5; }
+    .nav { background: #1B5E20; padding: 16px 24px; display: flex; justify-content: space-between; }
+    .nav h1 { color: white; font-size: 20px; }
+    .nav a { color: #F9A825; text-decoration: none; }
+    .menu { background: #2E7D32; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .menu a { color: white; text-decoration: none; padding: 6px 16px; border-radius: 20px; font-size: 14px; }
+    .menu a:hover, .menu a.active { background: #F9A825; color: #1B5E20; font-weight: bold; }
+    .content { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .section h2 { color: #1B5E20; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #F9A825; padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #1B5E20; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+    tr:hover { background: #F5F5F5; }
+    .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+    .badge-attente  { background: #FFF8E1; color: #F9A825; }
+    .badge-publiee  { background: #E8F5E9; color: #1B5E20; }
+    .badge-rejetee  { background: #FFEBEE; color: #B71C1C; }
+    .btn { padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; display:block; margin-bottom:4px; width:100%; }
+    .btn-green  { background: #1B5E20; color: white; }
+    .btn-red    { background: #B71C1C; color: white; }
+    textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; height: 80px; resize: vertical; }
+    .msg { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+    .msg-success { background: #E8F5E9; color: #1B5E20; }
+    .msg-error { background: #FFEBEE; color: #B71C1C; }
+  </style>
+</head>
+<body>
+  <nav class="nav"><h1>★ Karambig Roogo — Administration</h1><a href="/admin/logout">Déconnexion</a></nav>
+  <div class="menu">
+    <a href="/admin/dashboard">Tableau de bord</a>
+    <a href="/admin/niveaux">Niveaux</a>
+    <a href="/admin/matieres">Matières</a>
+    <a href="/admin/cours">Cours</a>
+    <a href="/admin/corriges">Corrigés</a>
+    <a href="/admin/questions" class="active">Questions SMS</a>
+  </div>
+  <div class="content">
+    <div id="msg"></div>
+    <div class="section">
+      <h2>Questions posées via SMS/USSD (<span id="total">0</span>)</h2>
+      <p style="font-size:13px;color:#757575;margin-bottom:12px">
+        Ces questions ont été envoyées par SMS depuis des téléphones basiques.
+        Répondre envoie automatiquement un SMS au numéro de l'utilisateur.
+      </p>
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Téléphone</th><th>Matière</th><th>Niveau</th><th>Question</th><th>Statut</th><th>Réponse envoyée</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    let questions = [];
+    async function init() {
+      questions = await fetch('/admin/api/questions').then(r => r.json());
+      document.getElementById('total').textContent = questions.length;
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = questions.map(q => `
+        <tr id="row-${q.id}">
+          <td style="white-space:nowrap">${new Date(q.created_at).toLocaleDateString('fr-FR')}</td>
+          <td>${q.telephone}</td>
+          <td>${q.matiere || '-'}</td>
+          <td>${q.niveau  || '-'}</td>
+          <td><b>${q.contenu}</b></td>
+          <td><span class="badge badge-${q.statut}">${q.statut}</span></td>
+          <td style="font-size:12px;color:#757575">${q.reponse_sms || '-'}</td>
+          <td>
+            ${q.statut === 'en_attente' ? `
+              <textarea id="rep-${q.id}" placeholder="Écrire la réponse SMS (max 800 car.)..."></textarea>
+              <button class="btn btn-green" onclick="repondre('${q.id}')">Envoyer SMS</button>
+              <button class="btn btn-red" onclick="rejeter('${q.id}')">Rejeter</button>
+            ` : '—'}
+          </td>
+        </tr>
+      `).join('');
+    }
+    function showMsg(text, type) {
+      const d = document.getElementById('msg');
+      d.innerHTML = `<div class="msg msg-${type}">${text}</div>`;
+      setTimeout(() => d.innerHTML = '', 5000);
+    }
+    async function repondre(id) {
+      const reponse = document.getElementById(`rep-${id}`)?.value;
+      if (!reponse || reponse.trim() === '') { showMsg('Écrire une réponse avant d\'envoyer.', 'error'); return; }
+      if (reponse.length > 800) { showMsg('La réponse ne doit pas dépasser 800 caractères.', 'error'); return; }
+      const r = await fetch(`/admin/api/questions/${id}/reponse`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reponse })
+      });
+      const data = await r.json();
+      if (data.error) { showMsg('Erreur: ' + data.error, 'error'); return; }
+      showMsg('Réponse envoyée par SMS avec succès !', 'success');
+      await init();
+    }
+    async function rejeter(id) {
+      if (!confirm('Rejeter cette question ?')) return;
+      await fetch(`/admin/api/questions/${id}/statut`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'rejetee' })
+      });
+      showMsg('Question rejetée.', 'success'); await init();
+    }
+    init();
+  </script>
+</body>
+</html>

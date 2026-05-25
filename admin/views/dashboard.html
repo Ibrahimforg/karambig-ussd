@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Karambig Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #F5F5F5; }
+    .nav { background: #1B5E20; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .nav h1 { color: white; font-size: 20px; }
+    .nav a { color: #F9A825; text-decoration: none; font-size: 14px; }
+    .menu { background: #2E7D32; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .menu a { color: white; text-decoration: none; padding: 6px 16px; border-radius: 20px; font-size: 14px; }
+    .menu a:hover, .menu a.active { background: #F9A825; color: #1B5E20; font-weight: bold; }
+    .content { padding: 24px; max-width: 1200px; margin: 0 auto; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .card { background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .card .num { font-size: 36px; font-weight: bold; color: #1B5E20; }
+    .card .label { font-size: 13px; color: #757575; margin-top: 4px; }
+    .card.alert .num { color: #F9A825; }
+    .section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .section h2 { color: #1B5E20; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #F9A825; padding-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #1B5E20; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #eee; }
+    tr:hover { background: #F5F5F5; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <h1>★ Karambig Roogo — Administration</h1>
+    <a href="/admin/logout">Déconnexion</a>
+  </nav>
+  <div class="menu">
+    <a href="/admin/dashboard" class="active">Tableau de bord</a>
+    <a href="/admin/niveaux">Niveaux</a>
+    <a href="/admin/matieres">Matières</a>
+    <a href="/admin/cours">Cours</a>
+    <a href="/admin/corriges">Corrigés</a>
+    <a href="/admin/questions">Questions SMS</a>
+  </div>
+  <div class="content">
+    <div class="cards" id="cards">
+      <div class="card"><div class="num">...</div><div class="label">Cours actifs</div></div>
+      <div class="card"><div class="num">...</div><div class="label">Corrigés validés</div></div>
+      <div class="card"><div class="num">...</div><div class="label">Sessions USSD</div></div>
+      <div class="card"><div class="num">...</div><div class="label">SMS envoyés</div></div>
+      <div class="card alert"><div class="num">...</div><div class="label">Questions en attente</div></div>
+    </div>
+    <div class="section">
+      <h2>Matières les plus consultées via USSD</h2>
+      <table>
+        <thead><tr><th>Matière</th><th>Nombre de sessions</th></tr></thead>
+        <tbody id="topMatieres"><tr><td colspan="2">Chargement...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    fetch('/admin/api/stats').then(r => r.json()).then(d => {
+      const nums = document.querySelectorAll('.card .num');
+      nums[0].textContent = d.cours;
+      nums[1].textContent = d.sujets;
+      nums[2].textContent = d.sessions;
+      nums[3].textContent = d.sms;
+      nums[4].textContent = d.questionsEnAttente;
+      const tbody = document.getElementById('topMatieres');
+      if (d.topMatieres.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2">Aucune donnée disponible</td></tr>';
+      } else {
+        tbody.innerHTML = d.topMatieres.map(m =>
+          `<tr><td>${m.libelle}</td><td>${m.nb}</td></tr>`
+        ).join('');
+      }
+    });
+  </script>
+</body>
+</html>

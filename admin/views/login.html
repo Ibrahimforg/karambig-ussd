@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karambig Roogo — Administration</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #1B5E20; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card { background: white; border-radius: 12px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 4px 24px rgba(0,0,0,0.2); }
+    h1 { color: #1B5E20; font-size: 24px; margin-bottom: 4px; }
+    p.sub { color: #757575; margin-bottom: 24px; font-size: 14px; }
+    label { display: block; font-size: 13px; color: #424242; margin-bottom: 4px; margin-top: 16px; font-weight: bold; }
+    input { width: 100%; padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; outline: none; }
+    input:focus { border-color: #1B5E20; }
+    button { width: 100%; margin-top: 24px; padding: 12px; background: #1B5E20; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    button:hover { background: #2E7D32; }
+    .error { background: #FFEBEE; color: #B71C1C; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .gold { color: #F9A825; font-size: 28px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="gold">★</div>
+    <h1>Karambig Roogo</h1>
+    <p class="sub">Interface d'administration USSD/SMS</p>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('error')) {
+        document.write('<div class="error">Identifiant ou mot de passe incorrect.</div>');
+      }
+    </script>
+    <form method="POST" action="/admin/login">
+      <label>Identifiant</label>
+      <input type="text" name="username" placeholder="admin" required autofocus>
+      <label>Mot de passe</label>
+      <input type="password" name="password" placeholder="••••••••" required>
+      <button type="submit">Se connecter</button>
+    </form>
+  </div>
+</body>
+</html>

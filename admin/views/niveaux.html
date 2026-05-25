@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Niveaux — Karambig Admin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #F5F5F5; }
+    .nav { background: #1B5E20; padding: 16px 24px; display: flex; justify-content: space-between; }
+    .nav h1 { color: white; font-size: 20px; }
+    .nav a { color: #F9A825; text-decoration: none; }
+    .menu { background: #2E7D32; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .menu a { color: white; text-decoration: none; padding: 6px 16px; border-radius: 20px; font-size: 14px; }
+    .menu a:hover, .menu a.active { background: #F9A825; color: #1B5E20; font-weight: bold; }
+    .content { padding: 24px; max-width: 800px; margin: 0 auto; }
+    .section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .section h2 { color: #1B5E20; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #F9A825; padding-bottom: 8px; }
+    label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; margin-top: 12px; }
+    input { width: 100%; padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
+    .btn-green { background: #1B5E20; color: white; margin-top: 16px; }
+    .btn-red { background: #B71C1C; color: white; }
+    .btn-orange { background: #F9A825; color: #1B5E20; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { background: #1B5E20; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #eee; }
+    .msg { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+    .msg-success { background: #E8F5E9; color: #1B5E20; }
+    .msg-error { background: #FFEBEE; color: #B71C1C; }
+  </style>
+</head>
+<body>
+  <nav class="nav"><h1>★ Karambig Roogo — Administration</h1><a href="/admin/logout">Déconnexion</a></nav>
+  <div class="menu">
+    <a href="/admin/dashboard">Tableau de bord</a>
+    <a href="/admin/niveaux" class="active">Niveaux</a>
+    <a href="/admin/matieres">Matières</a>
+    <a href="/admin/cours">Cours</a>
+    <a href="/admin/corriges">Corrigés</a>
+    <a href="/admin/questions">Questions SMS</a>
+  </div>
+  <div class="content">
+    <div id="msg"></div>
+    <div class="section">
+      <h2 id="formTitle">Ajouter un niveau</h2>
+      <input type="hidden" id="editId">
+      <div class="row">
+        <div><label>Code *</label><input type="text" id="code" placeholder="Ex: licence1"></div>
+        <div><label>Libellé *</label><input type="text" id="libelle" placeholder="Ex: Licence 1"></div>
+        <div><label>Ordre d'affichage *</label><input type="number" id="ordre" placeholder="Ex: 1" min="1"></div>
+      </div>
+      <button class="btn btn-green" onclick="saveNiveau()">Enregistrer</button>
+      <button class="btn btn-orange" style="margin-top:16px;margin-left:8px" onclick="resetForm()">Annuler</button>
+    </div>
+    <div class="section">
+      <h2>Liste des niveaux (<span id="total">0</span>)</h2>
+      <p style="font-size:13px;color:#757575;margin-bottom:12px">Les niveaux sont affichés dans le menu USSD dans l'ordre défini ici.</p>
+      <table>
+        <thead><tr><th>Ordre</th><th>Code</th><th>Libellé</th><th>Actions</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    let niveaux = [];
+    async function init() {
+      niveaux = await fetch('/admin/api/niveaux').then(r => r.json());
+      render();
+    }
+    function render() {
+      document.getElementById('total').textContent = niveaux.length;
+      document.getElementById('tbody').innerHTML = niveaux.map(n => `
+        <tr>
+          <td>${n.ordre}</td>
+          <td><code>${n.code}</code></td>
+          <td>${n.libelle}</td>
+          <td>
+            <button class="btn btn-orange" onclick="editNiveau(${n.id})">Modifier</button>
+            <button class="btn btn-red" style="margin-left:4px" onclick="deleteNiveau(${n.id})">Supprimer</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+    function editNiveau(id) {
+      const n = niveaux.find(x => x.id === id);
+      document.getElementById('editId').value  = id;
+      document.getElementById('code').value    = n.code;
+      document.getElementById('libelle').value = n.libelle;
+      document.getElementById('ordre').value   = n.ordre;
+      document.getElementById('formTitle').textContent = 'Modifier le niveau';
+      window.scrollTo(0, 0);
+    }
+    function resetForm() {
+      document.getElementById('editId').value  = '';
+      document.getElementById('code').value    = '';
+      document.getElementById('libelle').value = '';
+      document.getElementById('ordre').value   = '';
+      document.getElementById('formTitle').textContent = 'Ajouter un niveau';
+    }
+    function showMsg(text, type) {
+      const d = document.getElementById('msg');
+      d.innerHTML = `<div class="msg msg-${type}">${text}</div>`;
+      setTimeout(() => d.innerHTML = '', 4000);
+    }
+    async function saveNiveau() {
+      const id      = document.getElementById('editId').value;
+      const code    = document.getElementById('code').value;
+      const libelle = document.getElementById('libelle').value;
+      const ordre   = document.getElementById('ordre').value;
+      if (!code || !libelle || !ordre) { showMsg('Tous les champs sont obligatoires.', 'error'); return; }
+      const method  = id ? 'PUT' : 'POST';
+      const url     = id ? `/admin/api/niveaux/${id}` : '/admin/api/niveaux';
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, libelle, ordre: parseInt(ordre) }) });
+      const data = await r.json();
+      if (data.error) { showMsg(data.error, 'error'); return; }
+      niveaux = await fetch('/admin/api/niveaux').then(r => r.json());
+      showMsg(id ? 'Niveau modifié.' : 'Niveau ajouté.', 'success');
+      resetForm(); render();
+    }
+    async function deleteNiveau(id) {
+      if (!confirm('Supprimer ce niveau ?')) return;
+      await fetch(`/admin/api/niveaux/${id}`, { method: 'DELETE' });
+      niveaux = await fetch('/admin/api/niveaux').then(r => r.json());
+      showMsg('Niveau supprimé.', 'success'); render();
+    }
+    init();
+  </script>
+</body>
+</html>
