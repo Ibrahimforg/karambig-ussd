@@ -47,6 +47,10 @@ router.get( '/api/questions',             requireAuth, ctrl.getQuestions);
 router.post('/api/questions/:id/reponse', requireAuth, ctrl.repondreQuestion);
 router.put( '/api/questions/:id/statut',  requireAuth, ctrl.changerStatutQuestion);
 
+// Historique SMS
+router.get('/api/sms-history', requireAuth, ctrl.getSMSHistory);
+router.get('/sms',            requireAuth, ctrl.getSMSView);
+
 // Pages HTML
 router.get('/cours',      requireAuth, (req, res) => res.sendFile(path.join(__dirname, '../admin/views/cours.html')));
 router.get('/corriges',   requireAuth, (req, res) => res.sendFile(path.join(__dirname, '../admin/views/corriges.html')));

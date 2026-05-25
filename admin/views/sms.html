@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historique SMS - Karambig Roogo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+    .header h1 { font-size: 24px; margin-bottom: 10px; }
+    .header a { color: white; text-decoration: none; font-size: 14px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .stat-card h3 { font-size: 14px; color: #666; margin-bottom: 5px; }
+    .stat-card .value { font-size: 28px; font-weight: bold; color: #667eea; }
+    .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #667eea; color: white; padding: 12px; text-align: left; font-weight: 600; }
+    td { padding: 12px; border-bottom: 1px solid #eee; }
+    tr:hover { background: #f9f9f9; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .badge-cours { background: #4CAF50; color: white; }
+    .badge-corrige { background: #2196F3; color: white; }
+    .badge-question { background: #FF9800; color: white; }
+    .telephone { font-family: monospace; font-weight: 600; }
+    .date { color: #666; font-size: 12px; }
+    .empty { padding: 40px; text-align: center; color: #999; }
+    .refresh-btn { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; }
+    .refresh-btn:hover { background: #5568d3; }
+    .nav { margin-bottom: 20px; }
+    .nav a { color: #667eea; text-decoration: none; margin-right: 15px; font-weight: 500; }
+    .nav a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📱 Historique des SMS envoyés</h1>
+      <a href="/admin/dashboard">← Retour au tableau de bord</a>
+    </div>
+
+    <div class="nav">
+      <a href="/admin/cours">Gérer les cours</a>
+      <a href="/admin/corriges">Gérer les corrigés</a>
+      <a href="/admin/questions">Gérer les questions</a>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <h3>Total SMS envoyés</h3>
+        <div class="value" id="totalSMS">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>Cours envoyés</h3>
+        <div class="value" id="totalCours">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>Corrigés envoyés</h3>
+        <div class="value" id="totalCorriges">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>Questions reçues</h3>
+        <div class="value" id="totalQuestions">0</div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div style="padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="font-size: 18px; color: #333;">Derniers SMS envoyés</h2>
+        <button class="refresh-btn" onclick="loadSMS()">🔄 Actualiser</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Téléphone</th>
+            <th>Type</th>
+            <th>Matière</th>
+            <th>Niveau</th>
+            <th>Chemin USSD</th>
+          </tr>
+        </thead>
+        <tbody id="smsTable">
+          <tr><td colspan="6" class="empty">Chargement...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    async function loadSMS() {
+      try {
+        const response = await fetch('/admin/api/sms-history');
+        const sms = await response.json();
+        
+        // Stats
+        const totalSMS = sms.length;
+        const totalCours = sms.filter(s => s.action === 'cours').length;
+        const totalCorriges = sms.filter(s => s.action === 'corrige').length;
+        const totalQuestions = sms.filter(s => s.action === 'question').length;
+        
+        document.getElementById('totalSMS').textContent = totalSMS;
+        document.getElementById('totalCours').textContent = totalCours;
+        document.getElementById('totalCorriges').textContent = totalCorriges;
+        document.getElementById('totalQuestions').textContent = totalQuestions;
+        
+        // Table
+        const tbody = document.getElementById('smsTable');
+        if (sms.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty">Aucun SMS envoyé pour le moment</td></tr>';
+          return;
+        }
+        
+        tbody.innerHTML = sms.map(s => {
+          const date = new Date(s.created_at).toLocaleString('fr-FR');
+          let badgeClass = '';
+          let actionLabel = '';
+          
+          switch(s.action) {
+            case 'cours':
+              badgeClass = 'badge-cours';
+              actionLabel = '📚 Cours';
+              break;
+            case 'corrige':
+              badgeClass = 'badge-corrige';
+              actionLabel = '📝 Corrigé';
+              break;
+            case 'question':
+              badgeClass = 'badge-question';
+              actionLabel = '❓ Question';
+              break;
+            default:
+              badgeClass = '';
+              actionLabel = s.action;
+          }
+          
+          return `
+            <tr>
+              <td class="date">${date}</td>
+              <td class="telephone">${s.telephone}</td>
+              <td><span class="badge ${badgeClass}">${actionLabel}</span></td>
+              <td>${s.matiere || '-'}</td>
+              <td>${s.niveau || '-'}</td>
+              <td style="font-family: monospace; font-size: 12px;">${s.chemin || '-'}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('smsTable').innerHTML = '<tr><td colspan="6" class="empty">Erreur de chargement</td></tr>';
+      }
+    }
+
+    // Charger au démarrage
+    loadSMS();
+    
+    // Actualiser toutes les 30 secondes
+    setInterval(loadSMS, 30000);
+  </script>
+</body>
+</html>

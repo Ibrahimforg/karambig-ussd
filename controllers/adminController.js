@@ -337,6 +337,30 @@ async function changerStatutQuestion(req, res) {
   }
 }
 
+// ── Historique SMS ─────────────────────────────────────────────
+async function getSMSHistory(req, res) {
+  try {
+    const r = await pool.query(
+      `SELECT s.id, s.telephone, s.chemin, s.action, s.sms_envoye, s.created_at,
+              m.libelle as matiere, n.libelle as niveau
+       FROM sessions_ussd_log s
+       LEFT JOIN matieres m ON s.matiere_id = m.id
+       LEFT JOIN niveaux n ON s.niveau_id = n.id
+       WHERE s.sms_envoye = true
+       ORDER BY s.created_at DESC
+       LIMIT 50`
+    );
+    res.json(r.rows);
+  } catch (err) {
+    logger.error('SMS history error: ' + err.message);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function getSMSView(req, res) {
+  res.sendFile(path.join(__dirname, '../admin/views/sms.html'));
+}
+
 module.exports = {
   getLogin, postLogin, logout,
   getDashboard, getStats,
@@ -346,4 +370,5 @@ module.exports = {
   getCours, createCours, updateCours, deleteCours,
   getSujets, createSujet, updateSujet, deleteSujet,
   getQuestions, repondreQuestion, changerStatutQuestion,
+  getSMSHistory, getSMSView,
 };
