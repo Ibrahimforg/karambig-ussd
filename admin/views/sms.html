@@ -20,10 +20,11 @@
     .card .label { font-size: 13px; color: #757575; margin-top: 4px; }
     .section { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     .section h2 { color: #1B5E20; margin-bottom: 16px; font-size: 16px; border-bottom: 2px solid #F9A825; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th { background: #1B5E20; color: white; padding: 12px; text-align: left; font-weight: 600; }
-    td { padding: 12px; border-bottom: 1px solid #eee; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #1B5E20; color: white; padding: 10px; text-align: left; font-weight: 600; }
+    td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; }
     tr:hover { background: #F5F5F5; cursor: pointer; }
+    .sms-preview { font-size: 12px; color: #555; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .badge { padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
     .badge-cours { background: #4CAF50; color: white; }
     .badge-corrige { background: #2196F3; color: white; }
@@ -76,12 +77,12 @@
       <table>
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Téléphone</th>
-            <th>Type</th>
-            <th>Matière</th>
-            <th>Niveau</th>
-            <th>Chemin USSD</th>
+            <th style="width: 150px;">Date</th>
+            <th style="width: 120px;">Téléphone</th>
+            <th style="width: 80px;">Type</th>
+            <th style="width: 120px;">Matière</th>
+            <th style="width: 100px;">Niveau</th>
+            <th>Contenu SMS</th>
           </tr>
         </thead>
         <tbody id="smsTable">
@@ -160,7 +161,7 @@
               <td><span class="badge ${badgeClass}">${actionLabel}</span></td>
               <td>${s.matiere || '-'}</td>
               <td>${s.niveau || '-'}</td>
-              <td style="font-family: monospace; font-size: 12px;">${s.chemin || '-'}</td>
+              <td class="sms-preview">${s.contenu_sms || 'Contenu non disponible'}</td>
             </tr>
           `;
         }).join('');
@@ -198,11 +199,8 @@
         <div class="label">Niveau :</div>
         <div class="value">${sms.niveau || '-'}</div>
         
-        <div class="label">Chemin USSD :</div>
-        <div class="value" style="font-family: monospace;">${sms.chemin || '-'}</div>
-        
         <div class="label">Contenu du SMS :</div>
-        <div class="sms-content">Le contenu SMS sera disponible après récupération depuis la base de données.</div>
+        <div class="sms-content">${sms.contenu_sms || 'Contenu non disponible'}</div>
       `;
       
       document.getElementById('smsModal').style.display = 'block';

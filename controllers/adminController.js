@@ -342,7 +342,12 @@ async function getSMSHistory(req, res) {
   try {
     const r = await pool.query(
       `SELECT s.id, s.telephone, s.chemin, s.action, s.sms_envoye, s.created_at,
-              m.libelle as matiere, n.libelle as niveau
+              m.libelle as matiere, n.libelle as niveau,
+              CASE 
+                WHEN s.action = 'cours' THEN (SELECT version_sms FROM cours WHERE matiere_id = s.matiere_id AND niveau_id = s.niveau_id AND actif = true LIMIT 1)
+                WHEN s.action = 'corrige' THEN (SELECT version_sms FROM sujets WHERE matiere_id = s.matiere_id AND niveau_id = s.niveau_id AND actif = true AND statut = 'valide' LIMIT 1)
+                ELSE NULL
+              END as contenu_sms
        FROM sessions_ussd_log s
        LEFT JOIN matieres m ON s.matiere_id = m.id
        LEFT JOIN niveaux n ON s.niveau_id = n.id
