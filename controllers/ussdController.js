@@ -35,7 +35,11 @@ async function handleUSSD(req, res) {
         } catch (smsErr) {
           logger.error(`SMS envoi echoue: ${smsErr.message}`);
           await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'question', smsEnvoye: false, erreur: smsErr.message });
-          reponse = `END Erreur envoi SMS.\nInstructions non envoyees.\nReessaie plus tard.\nKarambig Roogo`;
+          if (smsErr.message === 'Configuration SMS manquante') {
+            reponse = `END Service SMS temporairement indisponible.\nInstructions non envoyees.\nContactez l'admin.\nKarambig Roogo`;
+          } else {
+            reponse = `END Erreur envoi SMS.\nInstructions non envoyees.\nReessaie plus tard.\nKarambig Roogo`;
+          }
         }
       } else if (c === '1' || c === '2') {
         const niveaux = await content.getNiveaux();
@@ -85,7 +89,11 @@ async function handleUSSD(req, res) {
             } catch (smsErr) {
               logger.error(`SMS envoi echoue: ${smsErr.message}`);
               await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'cours', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: false, erreur: smsErr.message });
-              reponse = `END Erreur envoi SMS.\nContenu disponible mais SMS non envoye.\nReessaie plus tard.\nKarambig Roogo`;
+              if (smsErr.message === 'Configuration SMS manquante') {
+                reponse = `END Service SMS temporairement indisponible.\nContenu disponible.\nContactez l'admin.\nKarambig Roogo`;
+              } else {
+                reponse = `END Erreur envoi SMS.\nContenu disponible mais SMS non envoye.\nReessaie plus tard.\nKarambig Roogo`;
+              }
             }
           } else {
             await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'cours_vide', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: false });
@@ -122,7 +130,11 @@ async function handleUSSD(req, res) {
             } catch (smsErr) {
               logger.error(`SMS envoi echoue: ${smsErr.message}`);
               await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'corrige', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: false, erreur: smsErr.message });
-              reponse = `END Erreur envoi SMS.\nContenu disponible mais SMS non envoye.\nReessaie plus tard.\nKarambig Roogo`;
+              if (smsErr.message === 'Configuration SMS manquante') {
+                reponse = `END Service SMS temporairement indisponible.\nContenu disponible.\nContactez l'admin.\nKarambig Roogo`;
+              } else {
+                reponse = `END Erreur envoi SMS.\nContenu disponible mais SMS non envoye.\nReessaie plus tard.\nKarambig Roogo`;
+              }
             }
           } else {
             await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'corrige_vide', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: false });

@@ -22,6 +22,12 @@ const SMS_MAX_LENGTH = 160;
 const SMS_MULTI_MAX_LENGTH = 459; // 3 SMS max pour éviter les coûts excessifs
 
 async function envoyerSMS(telephone, message) {
+  // Vérifier la configuration Africa's Talking
+  if (!process.env.AT_USERNAME || !process.env.AT_API_KEY) {
+    logger.error('Configuration Africa\'s Talking manquante: AT_USERNAME ou AT_API_KEY non defini');
+    throw new Error('Configuration SMS manquante');
+  }
+
   // Valider et normaliser le numéro
   const telephoneValide = validerTelephone(telephone);
   if (!telephoneValide) {
@@ -56,7 +62,7 @@ async function envoyerSMS(telephone, message) {
 
     return result;
   } catch (err) {
-    logger.error(`Erreur SMS a ${telephoneValide}: ${err.message} - Contenu: "${texte}"`);
+    logger.error(`Erreur SMS a ${telephoneValide}: ${err.message} - Contenu: "${texte}" - Stack: ${err.stack}`);
     throw err;
   }
 }
