@@ -353,7 +353,7 @@ async function getSMSHistory(req, res) {
        LEFT JOIN niveaux n ON s.niveau_id = n.id
        WHERE s.sms_envoye = true
        ORDER BY s.created_at DESC
-       LIMIT 50`
+       LIMIT 100`
     );
     res.json(r.rows);
   } catch (err) {

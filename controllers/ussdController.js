@@ -7,6 +7,7 @@ const logger  = require('../utils/logger');
 const TYPES_CORRIGES = { '1': 'examen_final', '2': 'partiel_td' };
 
 async function handleUSSD(req, res) {
+  const startTime = Date.now();
   logger.info('USSD request received:', JSON.stringify(req.body));
   const { sessionId, phoneNumber, text } = req.body;
   const etapes     = text === '' ? [] : text.split('*');
@@ -123,7 +124,8 @@ async function handleUSSD(req, res) {
     session.remove(sessionId);
   }
 
-  logger.info('USSD response:', reponse);
+  const duration = Date.now() - startTime;
+  logger.info(`USSD response: ${reponse.substring(0, 50)}... | Duration: ${duration}ms`);
   res.set('Content-Type', 'text/plain');
   res.send(reponse);
 }

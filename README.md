@@ -1,8 +1,39 @@
 # Karambig Roogo - Système USSD/SMS
 
-Système éducatif USSD/SMS pour le partage de cours et corrigés académiques au Burkina Faso.
+Système éducatif USSD/SMS professionnel pour le partage de cours et corrigés académiques au Burkina Faso.
 
-## Déploiement sur Render
+## 🌟 Fonctionnalités Principales
+
+### Interface USSD Interactive
+- Menu intuitif pour navigation facile
+- Accès aux cours par niveau et matière
+- Téléchargement de corrigés d'examens
+- Système de questions/réponses par SMS
+- Session management automatique (10 min)
+
+### Gestion SMS Professionnelle
+- Validation des numéros de téléphone (format Burkina Faso)
+- Normalisation automatique des numéros
+- Limitation de longueur SMS (160-459 caractères)
+- Tracking détaillé des envois (MessageID, coût)
+- Gestion des erreurs robuste
+- Logs professionnels avec temps de traitement
+
+### Interface d'Administration
+- Dashboard avec statistiques en temps réel
+- Gestion complète des niveaux, matières, cours, corrigés
+- Système de questions/réponses
+- Historique des SMS envoyés avec contenu
+- Interface responsive et professionnelle
+- Authentification sécurisée
+
+### Base de Données
+- PostgreSQL optimisé pour la production
+- Schema normalisé
+- Logging des sessions USSD
+- Tracking des interactions
+
+## 🚀 Déploiement sur Render
 
 ### 1. Créer un compte Render
 - Allez sur https://render.com
@@ -68,15 +99,48 @@ SESSION_SECRET=votre_cle_secrete_session
 - Configurez l'URL de callback USSD : `https://votre-app-render.onrender.com/ussd`
 - Configurez l'URL de callback SMS : `https://votre-app-render.onrender.com/sms`
 
-## Fonctionnalités
+## 📊 Architecture Technique
 
-- Interface d'administration complète
-- Gestion des cours et corrigés
-- Système USSD interactif
-- Envoi de SMS automatique
-- Base de données PostgreSQL
-- Historique des SMS envoyés
+### Dépendances de Production
+- **express**: Framework web Node.js
+- **pg**: Client PostgreSQL
+- **africastalking**: SDK AfricasTalking pour SMS/USSD
+- **express-session**: Gestion de sessions
+- **dotenv**: Gestion des variables d'environnement
 
-## Support
+### Structure du Projet
+```
+├── config/          # Configuration (database, AfricasTalking)
+├── controllers/     # Logique métier (USSD, SMS, Admin)
+├── services/        # Services (SMS, menu, contenu, session)
+├── routes/          # Routes Express
+├── utils/           # Utilitaires (logger, auth, formatage)
+├── admin/           # Interface d'administration
+│   └── views/       # Pages HTML
+├── db/              # Scripts SQL (schema, seed)
+└── index.js         # Point d'entrée
+```
+
+## 🔒 Sécurité
+
+- Validation des numéros de téléphone
+- Authentification admin par session
+- Protection des routes sensibles
+- Logs détaillés pour audit
+- Gestion des erreurs robuste
+
+## 📈 Performance
+
+- Optimisation des requêtes SQL
+- Gestion efficace des sessions USSD
+- Logs avec temps de traitement
+- Connection pooling PostgreSQL
+- Code optimisé et léger
+
+## 📞 Support
 
 Pour toute question, contactez : ibrahimforgo59@gmail.com
+
+## 📄 Licence
+
+Projet développé pour le concours Takaton 2026
