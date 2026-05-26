@@ -49,15 +49,21 @@ async function envoyerSMS(telephone, message) {
     });
 
     // Vérifier la réponse
-    if (result && result.SMSMessageData && result.SMSMessageData.Recipients) {
+    if (result && result.SMSMessageData && result.SMSMessageData.Recipients && result.SMSMessageData.Recipients.length > 0) {
       const recipient = result.SMSMessageData.Recipients[0];
       if (recipient.status === 'Success') {
         logger.info(`SMS envoye avec succes a ${telephoneValide} - MessageID: ${recipient.messageId}, Cout: ${recipient.cost}`);
+      } else if (recipient.status === 'Failed') {
+        logger.error(`SMS echoue a ${telephoneValide} - Status: ${recipient.status}, Message: ${recipient.message || 'Unknown'}`);
+        throw new Error(`SMS echoue: ${recipient.message || 'Unknown error'}`);
       } else {
         logger.warn(`SMS envoye mais statut inconnu a ${telephoneValide} - Status: ${recipient.status}`);
       }
+    } else if (result && result.SMSMessageData && result.SMSMessageData.Message) {
+      // Format alternatif de réponse
+      logger.info(`SMS envoye avec succes a ${telephoneValide} - Message: ${result.SMSMessageData.Message}`);
     } else {
-      logger.warn(`Reponse SMS inattendue pour ${telephoneValide}`);
+      logger.warn(`Reponse SMS inattendue pour ${telephoneValide} - Result: ${JSON.stringify(result)}`);
     }
 
     return result;
