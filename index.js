@@ -1,6 +1,5 @@
 require('dotenv').config();
 const express      = require('express');
-const bodyParser   = require('body-parser');
 const session      = require('express-session');
 const path         = require('path');
 const ussdRoute    = require('./routes/ussd');
@@ -12,8 +11,8 @@ const app  = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 app.use(session({
   secret:            process.env.SESSION_SECRET || 'karambig_secret',
   resave:            false,
@@ -38,7 +37,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   logger.info(`Serveur Karambig Roogo demarre sur le port ${PORT}`);
-  logger.info(`Interface admin disponible sur http://localhost:${PORT}/admin`);
+  logger.info(`Interface admin disponible sur http://0.0.0.0:${PORT}/admin`);
 });
