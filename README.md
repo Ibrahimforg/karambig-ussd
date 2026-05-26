@@ -142,20 +142,20 @@ Le système convertit automatiquement les formules mathématiques pour SMS :
 
 ### Exemples de Formats
 
-**CSV pour Niveaux :**
+**CSV pour Niveaux (avec en-têtes) :**
 ```
-Licence 1
-Licence 2
-Licence 3
-Master 1
+code,libelle
+licence1,Licence 1
+licence2,Licence 2
+master1,Master 1
 ```
 
 **JSON pour Matières :**
 ```json
 [
-  {"libelle": "Informatique"},
-  {"libelle": "Mathématiques"},
-  {"libelle": "Physique"}
+  {"code": "informatique", "libelle": "Informatique"},
+  {"code": "mathematiques", "libelle": "Mathématiques"},
+  {"code": "physique", "libelle": "Physique"}
 ]
 ```
 
@@ -187,4 +187,4 @@ Pour toute question, contactez : ibrahimforgo59@gmail.com
 
 ## 📄 Licence
 
-Projet développé pour le concours Takaton 2026
+Projet développé pour le concours Hakathon 2026
