@@ -26,6 +26,8 @@ Système éducatif USSD/SMS professionnel pour le partage de cours et corrigés 
 - Historique des SMS envoyés avec contenu
 - Interface responsive et professionnelle
 - Authentification sécurisée
+- **Upload de fichiers** (.txt, .csv, .json) pour importation en masse
+- **Formatage scientifique** automatique pour les cours techniques
 
 ### Base de Données
 - PostgreSQL optimisé pour la production
@@ -107,18 +109,60 @@ SESSION_SECRET=votre_cle_secrete_session
 - **africastalking**: SDK AfricasTalking pour SMS/USSD
 - **express-session**: Gestion de sessions
 - **dotenv**: Gestion des variables d'environnement
+- **multer**: Gestion des uploads de fichiers
 
 ### Structure du Projet
 ```
 ├── config/          # Configuration (database, AfricasTalking)
 ├── controllers/     # Logique métier (USSD, SMS, Admin)
-├── services/        # Services (SMS, menu, contenu, session)
+├── services/        # Services (SMS, menu, contenu, session, upload)
 ├── routes/          # Routes Express
 ├── utils/           # Utilitaires (logger, auth, formatage)
 ├── admin/           # Interface d'administration
 │   └── views/       # Pages HTML
 ├── db/              # Scripts SQL (schema, seed)
+├── uploads/         # Dossier temporaire pour les uploads
 └── index.js         # Point d'entrée
+```
+
+## 📤 Upload de Fichiers
+
+L'interface d'administration supporte l'upload de fichiers pour une importation en masse :
+
+### Formats Supportés
+- **Cours/Corrigés** : .txt, .json (max 5MB)
+- **Niveaux/Matières** : .csv, .json (max 5MB)
+
+### Formatage Scientifique
+Le système convertit automatiquement les formules mathématiques pour SMS :
+- Fractions: `a/b` → `a sur b`
+- Puissances: `x^2` → `x²`
+- Racines: `√x` → `racine de x`
+- Symboles grecs: `π` → `pi`, `α` → `alpha`, etc.
+
+### Exemples de Formats
+
+**CSV pour Niveaux :**
+```
+Licence 1
+Licence 2
+Licence 3
+Master 1
+```
+
+**JSON pour Matières :**
+```json
+[
+  {"libelle": "Informatique"},
+  {"libelle": "Mathématiques"},
+  {"libelle": "Physique"}
+]
+```
+
+**TXT pour Cours :**
+```
+Cours d'Algorithmes - Complexité O(n)=n log n
+Karambig Roogo - INFO L2
 ```
 
 ## 🔒 Sécurité
