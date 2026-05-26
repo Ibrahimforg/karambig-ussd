@@ -52,7 +52,6 @@
       <div class="row">
         <div><label>Code *</label><input type="text" id="code" placeholder="Ex: licence1"></div>
         <div><label>Libellé *</label><input type="text" id="libelle" placeholder="Ex: Licence 1"></div>
-        <div><label>Ordre d'affichage *</label><input type="number" id="ordre" placeholder="Ex: 1" min="1"></div>
       </div>
       <button class="btn btn-green" onclick="saveNiveau()">Enregistrer</button>
       <button class="btn btn-orange" style="margin-top:16px;margin-left:8px" onclick="resetForm()">Annuler</button>
@@ -65,8 +64,9 @@
         </div>
         <div class="upload-info">
           Formats supportés: .csv, .json (max 5MB)<br>
-          CSV: une ligne par niveau (libellé)<br>
-          JSON: [{"libelle": "Licence 1"}, {"libelle": "Licence 2"}]
+          CSV avec en-têtes: code,libelle (ex: licence1,Licence 1)<br>
+          JSON: [{"code": "licence1", "libelle": "Licence 1"}]<br>
+          L'ordre d'affichage est géré automatiquement par le système
         </div>
         <button class="btn btn-green" style="margin-top:12px" onclick="uploadNiveaux()">Uploader le fichier</button>
       </div>
@@ -75,7 +75,7 @@
       <h2>Liste des niveaux (<span id="total">0</span>)</h2>
       <p style="font-size:13px;color:#757575;margin-bottom:12px">Les niveaux sont affichés dans le menu USSD dans l'ordre défini ici.</p>
       <table>
-        <thead><tr><th>Ordre</th><th>Code</th><th>Libellé</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Code</th><th>Libellé</th><th>Actions</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
@@ -90,7 +90,6 @@
       document.getElementById('total').textContent = niveaux.length;
       document.getElementById('tbody').innerHTML = niveaux.map(n => `
         <tr>
-          <td>${n.ordre}</td>
           <td><code>${n.code}</code></td>
           <td>${n.libelle}</td>
           <td>
@@ -105,7 +104,6 @@
       document.getElementById('editId').value  = id;
       document.getElementById('code').value    = n.code;
       document.getElementById('libelle').value = n.libelle;
-      document.getElementById('ordre').value   = n.ordre;
       document.getElementById('formTitle').textContent = 'Modifier le niveau';
       window.scrollTo(0, 0);
     }
@@ -113,7 +111,6 @@
       document.getElementById('editId').value  = '';
       document.getElementById('code').value    = '';
       document.getElementById('libelle').value = '';
-      document.getElementById('ordre').value   = '';
       document.getElementById('formTitle').textContent = 'Ajouter un niveau';
     }
     function showMsg(text, type) {
@@ -125,11 +122,10 @@
       const id      = document.getElementById('editId').value;
       const code    = document.getElementById('code').value;
       const libelle = document.getElementById('libelle').value;
-      const ordre   = document.getElementById('ordre').value;
-      if (!code || !libelle || !ordre) { showMsg('Tous les champs sont obligatoires.', 'error'); return; }
+      if (!code || !libelle) { showMsg('Code et libellé sont obligatoires.', 'error'); return; }
       const method  = id ? 'PUT' : 'POST';
       const url     = id ? `/admin/api/niveaux/${id}` : '/admin/api/niveaux';
-      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, libelle, ordre: parseInt(ordre) }) });
+      const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, libelle }) });
       const data = await r.json();
       if (data.error) { showMsg(data.error, 'error'); return; }
       niveaux = await fetch('/admin/api/niveaux').then(r => r.json());

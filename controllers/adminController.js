@@ -64,11 +64,11 @@ async function getNiveaux(req, res) {
 }
 
 async function createNiveau(req, res) {
-  const { code, libelle, ordre } = req.body;
+  const { code, libelle } = req.body;
   try {
     const r = await pool.query(
-      'INSERT INTO niveaux (code, libelle, ordre) VALUES ($1, $2, $3) RETURNING *',
-      [code, libelle, ordre]
+      'INSERT INTO niveaux (code, libelle, ordre) VALUES ($1, $2, (SELECT COALESCE(MAX(ordre), 0) + 1 FROM niveaux)) RETURNING *',
+      [code, libelle]
     );
     res.json(r.rows[0]);
   } catch (err) {
@@ -78,11 +78,11 @@ async function createNiveau(req, res) {
 
 async function updateNiveau(req, res) {
   const { id } = req.params;
-  const { code, libelle, ordre } = req.body;
+  const { code, libelle } = req.body;
   try {
     const r = await pool.query(
-      'UPDATE niveaux SET code=$1, libelle=$2, ordre=$3 WHERE id=$4 RETURNING *',
-      [code, libelle, ordre, id]
+      'UPDATE niveaux SET code=$1, libelle=$2 WHERE id=$3 RETURNING *',
+      [code, libelle, id]
     );
     res.json(r.rows[0]);
   } catch (err) {
@@ -473,16 +473,18 @@ async function uploadNiveaux(req, res) {
     const ext = path.extname(req.file.originalname).toLowerCase();
     
     if (ext === '.csv') {
-      const data = upload.parseCSVFile(req.file.path);
+      const data = upload.parseCSVWithHeaders(req.file.path);
       let count = 0;
       
-      for (const row of data) {
-        if (row.length >= 1) {
-          const libelle = row[0];
-          if (libelle) {
-            await pool.query('INSERT INTO niveaux (libelle) VALUES ($1) ON CONFLICT DO NOTHING', [libelle]);
-            count++;
-          }
+      for (const item of data) {
+        const code = item.code || '';
+        const libelle = item.libelle || '';
+        if (libelle) {
+          await pool.query(
+            'INSERT INTO niveaux (code, libelle, ordre) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+            [code, libelle, count + 1]
+          );
+          count++;
         }
       }
       
@@ -495,8 +497,13 @@ async function uploadNiveaux(req, res) {
       
       if (Array.isArray(data)) {
         for (const item of data) {
-          if (item.libelle) {
-            await pool.query('INSERT INTO niveaux (libelle) VALUES ($1) ON CONFLICT DO NOTHING', [item.libelle]);
+          const code = item.code || '';
+          const libelle = item.libelle || '';
+          if (libelle) {
+            await pool.query(
+              'INSERT INTO niveaux (code, libelle, ordre) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
+              [code, libelle, count + 1]
+            );
             count++;
           }
         }
@@ -525,16 +532,18 @@ async function uploadMatieres(req, res) {
     const ext = path.extname(req.file.originalname).toLowerCase();
     
     if (ext === '.csv') {
-      const data = upload.parseCSVFile(req.file.path);
+      const data = upload.parseCSVWithHeaders(req.file.path);
       let count = 0;
       
-      for (const row of data) {
-        if (row.length >= 1) {
-          const libelle = row[0];
-          if (libelle) {
-            await pool.query('INSERT INTO matieres (libelle) VALUES ($1) ON CONFLICT DO NOTHING', [libelle]);
-            count++;
-          }
+      for (const item of data) {
+        const code = item.code || '';
+        const libelle = item.libelle || '';
+        if (libelle) {
+          await pool.query(
+            'INSERT INTO matieres (code, libelle) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [code, libelle]
+          );
+          count++;
         }
       }
       
@@ -547,8 +556,13 @@ async function uploadMatieres(req, res) {
       
       if (Array.isArray(data)) {
         for (const item of data) {
-          if (item.libelle) {
-            await pool.query('INSERT INTO matieres (libelle) VALUES ($1) ON CONFLICT DO NOTHING', [item.libelle]);
+          const code = item.code || '';
+          const libelle = item.libelle || '';
+          if (libelle) {
+            await pool.query(
+              'INSERT INTO matieres (code, libelle) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+              [code, libelle]
+            );
             count++;
           }
         }

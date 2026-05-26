@@ -31,6 +31,25 @@ function parseCSVFile(filePath) {
   }
 }
 
+// Parser un fichier CSV avec en-têtes
+function parseCSVWithHeaders(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.split('\n').filter(line => line.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    return lines.slice(1).map(line => {
+      const values = line.split(',').map(v => v.trim());
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = values[i] || '');
+      return obj;
+    });
+  } catch (err) {
+    logger.error(`Erreur parsing fichier CSV avec headers: ${err.message}`);
+    throw new Error('Impossible de lire le fichier CSV');
+  }
+}
+
 // Parser un fichier JSON pour extraire les données
 function parseJSONFile(filePath) {
   try {
@@ -103,6 +122,7 @@ module.exports = {
   SUPPORTED_FORMATS,
   parseTextFile,
   parseCSVFile,
+  parseCSVWithHeaders,
   parseJSONFile,
   cleanupFile,
   formatForSMS
