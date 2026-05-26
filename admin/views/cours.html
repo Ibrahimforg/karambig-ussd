@@ -37,6 +37,10 @@
     .msg { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
     .msg-success { background: #E8F5E9; color: #1B5E20; }
     .msg-error { background: #FFEBEE; color: #B71C1C; }
+    .upload-section { background: #E8F5E9; padding: 16px; border-radius: 8px; margin-top: 16px; border: 2px dashed #1B5E20; }
+    .upload-section h3 { color: #1B5E20; margin-bottom: 12px; font-size: 14px; }
+    .file-input { margin-top: 8px; }
+    .upload-info { font-size: 12px; color: #757575; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -82,6 +86,29 @@
         <button class="btn btn-green" onclick="saveCours()">Enregistrer</button>
         <button class="btn btn-orange" onclick="resetForm()">Annuler</button>
       </div>
+
+      <div class="upload-section">
+        <h3>📤 OU Uploader un fichier (.txt ou .json)</h3>
+        <div class="row">
+          <div>
+            <label>Matière *</label>
+            <select id="upload_matiere_id"><option value="">-- Choisir --</option></select>
+          </div>
+          <div>
+            <label>Niveau *</label>
+            <select id="upload_niveau_id"><option value="">-- Choisir --</option></select>
+          </div>
+        </div>
+        <div class="file-input">
+          <label>Fichier *</label>
+          <input type="file" id="uploadFile" accept=".txt,.json">
+        </div>
+        <div class="upload-info">
+          Formats supportés: .txt, .json (max 5MB)<br>
+          Le contenu sera automatiquement formaté pour SMS
+        </div>
+        <button class="btn btn-green" style="margin-top:12px" onclick="uploadCours()">Uploader le fichier</button>
+      </div>
     </div>
 
     <div class="section">
@@ -103,8 +130,16 @@
       niveaux  = await fetch('/admin/api/niveaux').then(r => r.json());
       const selM = document.getElementById('matiere_id');
       const selN = document.getElementById('niveau_id');
-      matieres.forEach(m => selM.innerHTML += `<option value="${m.id}">${m.libelle}</option>`);
-      niveaux.forEach(n  => selN.innerHTML += `<option value="${n.id}">${n.libelle}</option>`);
+      const selUM = document.getElementById('upload_matiere_id');
+      const selUN = document.getElementById('upload_niveau_id');
+      matieres.forEach(m => {
+        selM.innerHTML += `<option value="${m.id}">${m.libelle}</option>`;
+        selUM.innerHTML += `<option value="${m.id}">${m.libelle}</option>`;
+      });
+      niveaux.forEach(n  => {
+        selN.innerHTML += `<option value="${n.id}">${n.libelle}</option>`;
+        selUN.innerHTML += `<option value="${n.id}">${n.libelle}</option>`;
+      });
       await loadCours();
     }
 
@@ -197,6 +232,45 @@
       await fetch(`/admin/api/cours/${id}`, { method: 'DELETE' });
       showMsg('Cours supprimé.', 'success');
       await loadCours();
+    }
+
+    async function uploadCours() {
+      const matiereId = document.getElementById('upload_matiere_id').value;
+      const niveauId = document.getElementById('upload_niveau_id').value;
+      const fileInput = document.getElementById('uploadFile');
+
+      if (!matiereId || !niveauId) {
+        showMsg('Veuillez choisir la matière et le niveau.', 'error');
+        return;
+      }
+      if (!fileInput.files[0]) {
+        showMsg('Veuillez sélectionner un fichier.', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      formData.append('matiereId', matiereId);
+      formData.append('niveauId', niveauId);
+
+      try {
+        const r = await fetch('/admin/api/upload/cours', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await r.json();
+        if (data.error) {
+          showMsg(data.error, 'error');
+        } else {
+          showMsg(data.message || 'Cours uploadé avec succès.', 'success');
+          fileInput.value = '';
+          document.getElementById('upload_matiere_id').value = '';
+          document.getElementById('upload_niveau_id').value = '';
+          await loadCours();
+        }
+      } catch (err) {
+        showMsg('Erreur lors de l\'upload.', 'error');
+      }
     }
 
     init();

@@ -2,6 +2,7 @@ const pool   = require('../config/database');
 const sms    = require('../services/smsService');
 const logger = require('../utils/logger');
 const path   = require('path');
+const upload = require('../services/uploadService');
 
 // ── Authentification ────────────────────────────────────────
 function getLogin(req, res) {
@@ -366,6 +367,207 @@ async function getSMSView(req, res) {
   res.sendFile(path.join(__dirname, '../admin/views/sms.html'));
 }
 
+// ── Upload de fichiers ───────────────────────────────────────────
+async function uploadCours(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier uploadé' });
+    }
+
+    const { matiereId, niveauId } = req.body;
+    if (!matiereId || !niveauId) {
+      upload.cleanupFile(req.file.path);
+      return res.status(400).json({ error: 'matiereId et niveauId requis' });
+    }
+
+    // Parser le fichier
+    let contenu;
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    
+    if (ext === '.txt') {
+      contenu = upload.parseTextFile(req.file.path);
+    } else if (ext === '.json') {
+      const data = upload.parseJSONFile(req.file.path);
+      contenu = data.contenu || data.content || JSON.stringify(data);
+    } else {
+      upload.cleanupFile(req.file.path);
+      return res.status(400).json({ error: 'Format non supporté. Utilisez .txt ou .json' });
+    }
+
+    // Formater pour SMS
+    const contenuFormate = upload.formatForSMS(contenu);
+    
+    // Créer le cours
+    const versionSMS = contenuFormate.substring(0, 459);
+    await pool.query(
+      'INSERT INTO cours (matiere_id, niveau_id, titre, contenu, version_sms, actif) VALUES ($1, $2, $3, $4, $5, true)',
+      [matiereId, niveauId, req.file.originalname, contenuFormate, versionSMS]
+    );
+
+    // Nettoyer le fichier temporaire
+    upload.cleanupFile(req.file.path);
+
+    logger.info(`Cours uploadé via fichier: ${req.file.originalname}`);
+    res.json({ success: true, message: 'Cours uploadé avec succès' });
+  } catch (err) {
+    if (req.file) upload.cleanupFile(req.file.path);
+    logger.error(`Erreur upload cours: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function uploadSujet(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier uploadé' });
+    }
+
+    const { matiereId, niveauId, typeCorrige } = req.body;
+    if (!matiereId || !niveauId || !typeCorrige) {
+      upload.cleanupFile(req.file.path);
+      return res.status(400).json({ error: 'matiereId, niveauId et typeCorrige requis' });
+    }
+
+    // Parser le fichier
+    let contenu;
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    
+    if (ext === '.txt') {
+      contenu = upload.parseTextFile(req.file.path);
+    } else if (ext === '.json') {
+      const data = upload.parseJSONFile(req.file.path);
+      contenu = data.contenu || data.content || JSON.stringify(data);
+    } else {
+      upload.cleanupFile(req.file.path);
+      return res.status(400).json({ error: 'Format non supporté. Utilisez .txt ou .json' });
+    }
+
+    // Formater pour SMS
+    const contenuFormate = upload.formatForSMS(contenu);
+    
+    // Créer le sujet/corrige
+    const versionSMS = contenuFormate.substring(0, 459);
+    await pool.query(
+      'INSERT INTO sujets (matiere_id, niveau_id, type_corrige, titre, contenu, version_sms, actif, statut) VALUES ($1, $2, $3, $4, $5, $6, true, $7)',
+      [matiereId, niveauId, typeCorrige, req.file.originalname, contenuFormate, versionSMS, 'en_attente']
+    );
+
+    // Nettoyer le fichier temporaire
+    upload.cleanupFile(req.file.path);
+
+    logger.info(`Sujet uploadé via fichier: ${req.file.originalname}`);
+    res.json({ success: true, message: 'Sujet uploadé avec succès' });
+  } catch (err) {
+    if (req.file) upload.cleanupFile(req.file.path);
+    logger.error(`Erreur upload sujet: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function uploadNiveaux(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier uploadé' });
+    }
+
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    
+    if (ext === '.csv') {
+      const data = upload.parseCSVFile(req.file.path);
+      let count = 0;
+      
+      for (const row of data) {
+        if (row.length >= 1) {
+          const libelle = row[0];
+          if (libelle) {
+            await pool.query('INSERT INTO niveaux (libelle) VALUES ($1) ON CONFLICT DO NOTHING', [libelle]);
+            count++;
+          }
+        }
+      }
+      
+      upload.cleanupFile(req.file.path);
+      logger.info(`${count} niveaux uploadés via CSV`);
+      res.json({ success: true, message: `${count} niveaux uploadés avec succès` });
+    } else if (ext === '.json') {
+      const data = upload.parseJSONFile(req.file.path);
+      let count = 0;
+      
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (item.libelle) {
+            await pool.query('INSERT INTO niveaux (libelle) VALUES ($1) ON CONFLICT DO NOTHING', [item.libelle]);
+            count++;
+          }
+        }
+      }
+      
+      upload.cleanupFile(req.file.path);
+      logger.info(`${count} niveaux uploadés via JSON`);
+      res.json({ success: true, message: `${count} niveaux uploadés avec succès` });
+    } else {
+      upload.cleanupFile(req.file.path);
+      return res.status(400).json({ error: 'Format non supporté. Utilisez .csv ou .json' });
+    }
+  } catch (err) {
+    if (req.file) upload.cleanupFile(req.file.path);
+    logger.error(`Erreur upload niveaux: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function uploadMatieres(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier uploadé' });
+    }
+
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    
+    if (ext === '.csv') {
+      const data = upload.parseCSVFile(req.file.path);
+      let count = 0;
+      
+      for (const row of data) {
+        if (row.length >= 1) {
+          const libelle = row[0];
+          if (libelle) {
+            await pool.query('INSERT INTO matieres (libelle) VALUES ($1) ON CONFLICT DO NOTHING', [libelle]);
+            count++;
+          }
+        }
+      }
+      
+      upload.cleanupFile(req.file.path);
+      logger.info(`${count} matieres uploadées via CSV`);
+      res.json({ success: true, message: `${count} matieres uploadées avec succès` });
+    } else if (ext === '.json') {
+      const data = upload.parseJSONFile(req.file.path);
+      let count = 0;
+      
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (item.libelle) {
+            await pool.query('INSERT INTO matieres (libelle) VALUES ($1) ON CONFLICT DO NOTHING', [item.libelle]);
+            count++;
+          }
+        }
+      }
+      
+      upload.cleanupFile(req.file.path);
+      logger.info(`${count} matieres uploadées via JSON`);
+      res.json({ success: true, message: `${count} matieres uploadées avec succès` });
+    } else {
+      upload.cleanupFile(req.file.path);
+      return res.status(400).json({ error: 'Format non supporté. Utilisez .csv ou .json' });
+    }
+  } catch (err) {
+    if (req.file) upload.cleanupFile(req.file.path);
+    logger.error(`Erreur upload matieres: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getLogin, postLogin, logout,
   getDashboard, getStats,
@@ -376,4 +578,5 @@ module.exports = {
   getSujets, createSujet, updateSujet, deleteSujet,
   getQuestions, repondreQuestion, changerStatutQuestion,
   getSMSHistory, getSMSView,
+  uploadCours, uploadSujet, uploadNiveaux, uploadMatieres,
 };

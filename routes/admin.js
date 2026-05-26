@@ -3,6 +3,38 @@ const router  = express.Router();
 const ctrl    = require('../controllers/adminController');
 const { requireAuth } = require('../utils/auth');
 const path    = require('path');
+const multer  = require('multer');
+const fs      = require('fs');
+
+// Configuration multer pour les uploads
+const uploadDir = './uploads';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const allowedExts = ['.txt', '.csv', '.json'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedExts.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Format de fichier non supporté. Utilisez .txt, .csv ou .json'));
+    }
+  }
+});
 
 // Auth
 router.get( '/login',  ctrl.getLogin);
@@ -50,6 +82,12 @@ router.put( '/api/questions/:id/statut',  requireAuth, ctrl.changerStatutQuestio
 // Historique SMS
 router.get('/api/sms-history', requireAuth, ctrl.getSMSHistory);
 router.get('/sms',            requireAuth, ctrl.getSMSView);
+
+// Upload de fichiers
+router.post('/api/upload/cours',    requireAuth, upload.single('file'), ctrl.uploadCours);
+router.post('/api/upload/sujet',    requireAuth, upload.single('file'), ctrl.uploadSujet);
+router.post('/api/upload/niveaux',  requireAuth, upload.single('file'), ctrl.uploadNiveaux);
+router.post('/api/upload/matieres', requireAuth, upload.single('file'), ctrl.uploadMatieres);
 
 // Pages HTML
 router.get('/cours',      requireAuth, (req, res) => res.sendFile(path.join(__dirname, '../admin/views/cours.html')));
