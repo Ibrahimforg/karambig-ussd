@@ -26,10 +26,12 @@
     .btn-orange { background: #F9A825; color: #1B5E20; }
     .btn:hover { opacity: 0.9; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th { background: #1B5E20; color: white; padding: 10px; text-align: left; }
     td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; }
-    tr:hover { background: #F5F5F5; }
+    tr:hover { background: #F5F5F5; cursor: pointer; }
+    .clickable-indicator { color: #1B5E20; font-size: 18px; font-weight: bold; margin-right: 8px; }
     .sms-preview { font-family: monospace; font-size: 12px; color: #424242; max-width: 300px; word-break: break-word; }
     .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
     .badge-green { background: #E8F5E9; color: #1B5E20; }
@@ -49,6 +51,10 @@
     .modal-label { font-weight: bold; color: #424242; margin-bottom: 4px; }
     .modal-value { margin-bottom: 12px; color: #212121; }
     .modal-content-text { background: #F5F5F5; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer; }
+    .pagination button:hover { background: #F5F5F5; }
+    .pagination button.active { background: #1B5E20; color: white; border-color: #1B5E20; }
   </style>
 </head>
 <body>
@@ -70,7 +76,7 @@
     <div class="section">
       <h2 id="formTitle">Ajouter un cours</h2>
       <input type="hidden" id="editId">
-      <div class="row">
+      <div class="row-3">
         <div>
           <label>Titre du cours *</label>
           <input type="text" id="titre" placeholder="Ex: Algorithmes et complexité">
@@ -79,13 +85,10 @@
           <label>Matière *</label>
           <select id="matiere_id"><option value="">-- Choisir --</option></select>
         </div>
-      </div>
-      <div class="row">
         <div>
           <label>Niveau *</label>
           <select id="niveau_id"><option value="">-- Choisir --</option></select>
         </div>
-        <div></div>
       </div>
       <label>Version SMS * <small style="color:#F9A825">(max 800 caractères — ce texte sera envoyé par SMS via USSD)</small></label>
       <textarea id="version_sms" placeholder="Résumé du cours pour envoi SMS. Ex: INFO L2 - Algo: Complexite O(n)=... Karambig Roogo" oninput="updateCounter()"></textarea>
@@ -127,6 +130,7 @@
         </thead>
         <tbody id="tbody"></tbody>
       </table>
+      <div class="pagination" id="pagination"></div>
     </div>
   </div>
 
@@ -142,6 +146,8 @@
 
   <script>
     let matieres = [], niveaux = [], cours = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
 
     async function init() {
       matieres = await fetch('/admin/api/matieres').then(r => r.json());
@@ -164,20 +170,47 @@
     async function loadCours() {
       cours = await fetch('/admin/api/cours').then(r => r.json());
       document.getElementById('total').textContent = cours.length;
+      const totalPages = Math.ceil(cours.length / itemsPerPage);
+      
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageItems = cours.slice(start, end);
+
       const tbody = document.getElementById('tbody');
-      tbody.innerHTML = cours.map(c => `
+      tbody.innerHTML = pageItems.map(c => `
         <tr onclick="showCoursDetails('${c.id}')">
-          <td><b>${c.titre}</b></td>
+          <td><span class="clickable-indicator">▶</span><b>${c.titre}</b></td>
           <td>${c.matiere}</td>
           <td>${c.niveau}</td>
           <td>${c.nombre_telechargements}</td>
           <td><span class="badge ${c.actif ? 'badge-green' : 'badge-red'}">${c.actif ? 'Actif' : 'Inactif'}</span></td>
           <td>
-            <button class="btn btn-orange" style="margin-bottom:4px" onclick="event.stopPropagation(); editCours('${c.id}')">Modifier</button><br>
-            <button class="btn btn-red" onclick="event.stopPropagation(); deleteCours('${c.id}')">Supprimer</button>
+            <button class="btn btn-orange" onclick="event.stopPropagation(); editCours('${c.id}')">Modifier</button>
+            <button class="btn btn-red" style="margin-left:4px" onclick="event.stopPropagation(); deleteCours('${c.id}')">Supprimer</button>
           </td>
         </tr>
       `).join('');
+
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      const pagination = document.getElementById('pagination');
+      if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+      }
+      pagination.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      loadCours();
     }
 
     function updateCounter() {

@@ -25,10 +25,25 @@
     .btn-red { background: #B71C1C; color: white; }
     .btn-orange { background: #F9A825; color: #1B5E20; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .row-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th { background: #1B5E20; color: white; padding: 10px; text-align: left; }
     td { padding: 10px; border-bottom: 1px solid #eee; }
-    tr:hover { background: #F5F5F5; }
+    tr:hover { background: #F5F5F5; cursor: pointer; }
+    .clickable-indicator { color: #1B5E20; font-size: 18px; font-weight: bold; margin-right: 8px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+    .modal-content { background: white; margin: 5% auto; padding: 24px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-close { font-size: 28px; cursor: pointer; color: #757575; }
+    .modal-close:hover { color: #B71C1C; }
+    .modal-label { font-weight: bold; color: #424242; margin-bottom: 4px; }
+    .modal-value { margin-bottom: 12px; color: #212121; }
+    .modal-content-text { background: #F5F5F5; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer; }
+    .pagination button:hover { background: #F5F5F5; }
+    .pagination button.active { background: #1B5E20; color: white; border-color: #1B5E20; }
     .sms-preview { font-family: monospace; font-size: 12px; max-width: 280px; word-break: break-word; }
     .msg { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
     .msg-success { background: #E8F5E9; color: #1B5E20; }
@@ -57,17 +72,15 @@
     <div class="section">
       <h2 id="formTitle">Ajouter un corrigé / sujet</h2>
       <input type="hidden" id="editId">
-      <div class="row">
+      <div class="row-5">
         <div>
           <label>Titre *</label>
-          <input type="text" id="titre" placeholder="Ex: Examen final Informatique L2 2024">
+          <input type="text" id="titre" placeholder="Ex: Examen final">
         </div>
         <div>
           <label>Matière *</label>
           <select id="matiere_id"><option value="">-- Choisir --</option></select>
         </div>
-      </div>
-      <div class="row">
         <div>
           <label>Niveau *</label>
           <select id="niveau_id"><option value="">-- Choisir --</option></select>
@@ -79,10 +92,10 @@
             <option value="partiel_td">Partiel / TD</option>
           </select>
         </div>
-      </div>
-      <div>
-        <label>Année</label>
-        <input type="number" id="annee" placeholder="Ex: 2024" min="2000" max="2099">
+        <div>
+          <label>Année</label>
+          <input type="number" id="annee" placeholder="2024" min="2000" max="2099">
+        </div>
       </div>
       <label>Version SMS * <small style="color:#F9A825">(max 800 caractères)</small></label>
       <textarea id="version_sms" placeholder="Résumé du corrigé pour envoi SMS..." oninput="updateCounter()"></textarea>
@@ -94,7 +107,7 @@
 
       <div class="upload-section">
         <h3>📤 OU Uploader un fichier (.txt ou .json)</h3>
-        <div class="row">
+        <div class="row-3">
           <div>
             <label>Matière *</label>
             <select id="upload_matiere_id"><option value="">-- Choisir --</option></select>
@@ -103,8 +116,6 @@
             <label>Niveau *</label>
             <select id="upload_niveau_id"><option value="">-- Choisir --</option></select>
           </div>
-        </div>
-        <div class="row">
           <div>
             <label>Type *</label>
             <select id="upload_type">
@@ -112,7 +123,6 @@
               <option value="partiel_td">Partiel / TD</option>
             </select>
           </div>
-          <div></div>
         </div>
         <div class="file-input">
           <label>Fichier *</label>
@@ -128,13 +138,27 @@
     <div class="section">
       <h2>Liste des corrigés (<span id="total">0</span>)</h2>
       <table>
-        <thead><tr><th>Titre</th><th>Matière</th><th>Niveau</th><th>Type</th><th>Année</th><th>Consultations</th><th>Version SMS</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Titre</th><th>Matière</th><th>Niveau</th><th>Type</th><th>Année</th><th>Consultations</th><th>Actions</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+
+  <div id="sujetsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Détails du corrigé</h2>
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+      </div>
+      <div id="modalBody"></div>
     </div>
   </div>
   <script>
     let matieres = [], niveaux = [], sujets = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
     async function init() {
       matieres = await fetch('/admin/api/matieres').then(r => r.json());
       niveaux  = await fetch('/admin/api/niveaux').then(r => r.json());
@@ -152,25 +176,52 @@
       });
       await loadSujets();
     }
+
     async function loadSujets() {
       sujets = await fetch('/admin/api/sujets').then(r => r.json());
       document.getElementById('total').textContent = sujets.length;
+      const totalPages = Math.ceil(sujets.length / itemsPerPage);
+      
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageItems = sujets.slice(start, end);
+
       const tbody = document.getElementById('tbody');
-      tbody.innerHTML = sujets.map(s => `
-        <tr>
-          <td><b>${s.titre}</b></td>
+      tbody.innerHTML = pageItems.map(s => `
+        <tr onclick="showSujetDetails('${s.id}')">
+          <td><span class="clickable-indicator">▶</span><b>${s.titre}</b></td>
           <td>${s.matiere}</td>
           <td>${s.niveau}</td>
           <td>${s.type === 'examen_final' ? 'Examen final' : 'Partiel/TD'}</td>
           <td>${s.annee || '-'}</td>
           <td>${s.nombre_consultations}</td>
-          <td><div class="sms-preview">${s.version_sms ? s.version_sms.substring(0,80)+'...' : 'Non définie'}</div></td>
           <td>
-            <button class="btn btn-orange" style="margin-bottom:4px" onclick="editSujet('${s.id}')">Modifier</button><br>
-            <button class="btn btn-red" onclick="deleteSujet('${s.id}')">Supprimer</button>
+            <button class="btn btn-orange" onclick="event.stopPropagation(); editSujet('${s.id}')">Modifier</button>
+            <button class="btn btn-red" style="margin-left:4px" onclick="event.stopPropagation(); deleteSujet('${s.id}')">Supprimer</button>
           </td>
         </tr>
       `).join('');
+
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      const pagination = document.getElementById('pagination');
+      if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+      }
+      pagination.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      loadSujets();
     }
     function updateCounter() {
       const v = document.getElementById('version_sms').value;
@@ -267,6 +318,39 @@
         showMsg('Erreur lors de l\'upload.', 'error');
       }
     }
+
+    function showSujetDetails(id) {
+      const s = sujets.find(x => x.id === id);
+      if (!s) return;
+      document.getElementById('modalBody').innerHTML = `
+        <div class="modal-label">Titre :</div>
+        <div class="modal-value">${s.titre}</div>
+        
+        <div class="modal-label">Matière :</div>
+        <div class="modal-value">${s.matiere}</div>
+        
+        <div class="modal-label">Niveau :</div>
+        <div class="modal-value">${s.niveau}</div>
+        
+        <div class="modal-label">Type :</div>
+        <div class="modal-value">${s.type === 'examen_final' ? 'Examen final' : 'Partiel/TD'}</div>
+        
+        <div class="modal-label">Année :</div>
+        <div class="modal-value">${s.annee || '-'}</div>
+        
+        <div class="modal-label">Version SMS :</div>
+        <div class="modal-content-text">${s.version_sms || 'Non définie'}</div>
+        
+        <div class="modal-label">Contenu complet :</div>
+        <div class="modal-content-text">${s.contenu || 'Contenu non disponible'}</div>
+      `;
+      document.getElementById('sujetsModal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('sujetsModal').style.display = 'none';
+    }
+
     init();
   </script>
 </body>

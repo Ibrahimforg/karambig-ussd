@@ -32,6 +32,10 @@
     .upload-section h3 { color: #1B5E20; margin-bottom: 12px; font-size: 14px; }
     .file-input { margin-top: 8px; }
     .upload-info { font-size: 12px; color: #757575; margin-top: 8px; }
+    .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer; }
+    .pagination button:hover { background: #F5F5F5; }
+    .pagination button.active { background: #1B5E20; color: white; border-color: #1B5E20; }
   </style>
 </head>
 <body>
@@ -91,10 +95,14 @@
         <thead><tr><th>Code</th><th>Libellé</th><th>Actions</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
+      <div class="pagination" id="pagination"></div>
     </div>
   </div>
   <script>
     let matieres = [], niveaux = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
     async function init() {
       matieres = await fetch('/admin/api/matieres').then(r => r.json());
       niveaux  = await fetch('/admin/api/niveaux').then(r => r.json());
@@ -104,9 +112,16 @@
       niveaux.forEach(n  => selN.innerHTML += `<option value="${n.id}">${n.libelle}</option>`);
       renderMatieres(); await loadLiaisons();
     }
+
     function renderMatieres() {
       document.getElementById('total').textContent = matieres.length;
-      document.getElementById('tbody').innerHTML = matieres.map(m => `
+      const totalPages = Math.ceil(matieres.length / itemsPerPage);
+      
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageItems = matieres.slice(start, end);
+
+      document.getElementById('tbody').innerHTML = pageItems.map(m => `
         <tr>
           <td><code>${m.code}</code></td>
           <td>${m.libelle}</td>
@@ -116,6 +131,27 @@
           </td>
         </tr>
       `).join('');
+
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      const pagination = document.getElementById('pagination');
+      if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+      }
+      pagination.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      renderMatieres();
     }
     async function loadLiaisons() {
       const liaisons = await fetch('/admin/api/liaisons').then(r => r.json());

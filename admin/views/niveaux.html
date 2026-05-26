@@ -18,6 +18,8 @@
     label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; margin-top: 12px; }
     input { width: 100%; padding: 10px 14px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
     .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
     .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
     .btn-green { background: #1B5E20; color: white; margin-top: 16px; }
     .btn-red { background: #B71C1C; color: white; }
@@ -32,6 +34,10 @@
     .upload-section h3 { color: #1B5E20; margin-bottom: 12px; font-size: 14px; }
     .file-input { margin-top: 8px; }
     .upload-info { font-size: 12px; color: #757575; margin-top: 8px; }
+    .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer; }
+    .pagination button:hover { background: #F5F5F5; }
+    .pagination button.active { background: #1B5E20; color: white; border-color: #1B5E20; }
   </style>
 </head>
 <body>
@@ -78,17 +84,28 @@
         <thead><tr><th>Code</th><th>Libellé</th><th>Actions</th></tr></thead>
         <tbody id="tbody"></tbody>
       </table>
+      <div class="pagination" id="pagination"></div>
     </div>
   </div>
   <script>
     let niveaux = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
     async function init() {
       niveaux = await fetch('/admin/api/niveaux').then(r => r.json());
       render();
     }
+
     function render() {
       document.getElementById('total').textContent = niveaux.length;
-      document.getElementById('tbody').innerHTML = niveaux.map(n => `
+      const totalPages = Math.ceil(niveaux.length / itemsPerPage);
+      
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageItems = niveaux.slice(start, end);
+
+      document.getElementById('tbody').innerHTML = pageItems.map(n => `
         <tr>
           <td><code>${n.code}</code></td>
           <td>${n.libelle}</td>
@@ -98,6 +115,27 @@
           </td>
         </tr>
       `).join('');
+
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      const pagination = document.getElementById('pagination');
+      if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+      }
+      pagination.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      render();
     }
     function editNiveau(id) {
       const n = niveaux.find(x => x.id === id);
