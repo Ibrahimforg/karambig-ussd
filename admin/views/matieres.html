@@ -28,6 +28,10 @@
     .msg { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
     .msg-success { background: #E8F5E9; color: #1B5E20; }
     .msg-error { background: #FFEBEE; color: #B71C1C; }
+    .upload-section { background: #E8F5E9; padding: 16px; border-radius: 8px; margin-top: 16px; border: 2px dashed #1B5E20; }
+    .upload-section h3 { color: #1B5E20; margin-bottom: 12px; font-size: 14px; }
+    .file-input { margin-top: 8px; }
+    .upload-info { font-size: 12px; color: #757575; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -51,6 +55,20 @@
       </div>
       <button class="btn btn-green" onclick="saveMatiere()">Enregistrer</button>
       <button class="btn btn-orange" style="margin-top:16px;margin-left:8px" onclick="resetForm()">Annuler</button>
+
+      <div class="upload-section">
+        <h3>📤 OU Uploader un fichier (.csv ou .json)</h3>
+        <div class="file-input">
+          <label>Fichier *</label>
+          <input type="file" id="uploadFile" accept=".csv,.json">
+        </div>
+        <div class="upload-info">
+          Formats supportés: .csv, .json (max 5MB)<br>
+          CSV: une ligne par matière (libellé)<br>
+          JSON: [{"libellé": "Informatique"}, {"libellé": "Mathématiques"}]
+        </div>
+        <button class="btn btn-green" style="margin-top:12px" onclick="uploadMatieres()">Uploader le fichier</button>
+      </div>
     </div>
 
     <div class="section">
@@ -161,6 +179,32 @@
       if (!confirm('Supprimer cette liaison ?')) return;
       await fetch(`/admin/api/liaisons/${id}`, { method: 'DELETE' });
       showMsg('Liaison supprimée.', 'success'); await loadLiaisons();
+    }
+    async function uploadMatieres() {
+      const fileInput = document.getElementById('uploadFile');
+      if (!fileInput.files[0]) {
+        showMsg('Veuillez sélectionner un fichier.', 'error');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+      try {
+        const r = await fetch('/admin/api/upload/matieres', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await r.json();
+        if (data.error) {
+          showMsg(data.error, 'error');
+        } else {
+          showMsg(data.message || 'Matières uploadées avec succès.', 'success');
+          fileInput.value = '';
+          matieres = await fetch('/admin/api/matieres').then(r => r.json());
+          renderMatieres();
+        }
+      } catch (err) {
+        showMsg('Erreur lors de l\'upload.', 'error');
+      }
     }
     init();
   </script>
