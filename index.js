@@ -20,9 +20,6 @@ app.use(session({
   cookie:            { maxAge: 24 * 60 * 60 * 1000 } // 24h
 }));
 
-// Fichiers statiques admin
-app.use('/admin/public', express.static(path.join(__dirname, 'admin/public')));
-
 // Routes
 app.use('/ussd',  ussdRoute);
 app.use('/sms',   smsRoute);
