@@ -28,9 +28,15 @@ async function handleUSSD(req, res) {
         reponse = menu.menuQuitter();
       } else if (c === '3') {
         const instructions = `Karambig Roogo - Pour poser une question,\nenvoyez un SMS au +226XXXXXXXX\nFormat: QUESTION|Matiere|Niveau|Votre question\nEx: QUESTION|Informatique|Licence 2|TCP vs UDP?\nReponse sous 48h par SMS.`;
-        await sms.envoyerSMS(phoneNumber, instructions);
-        await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'question', smsEnvoye: true });
-        reponse = menu.finPoserQuestion();
+        try {
+          await sms.envoyerSMS(phoneNumber, instructions);
+          await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'question', smsEnvoye: true });
+          reponse = menu.finPoserQuestion();
+        } catch (smsErr) {
+          logger.error(`SMS envoi echoue: ${smsErr.message}`);
+          await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'question', smsEnvoye: false, erreur: smsErr.message });
+          reponse = `END Erreur envoi SMS.\nInstructions non envoyees.\nReessaie plus tard.\nKarambig Roogo`;
+        }
       } else if (c === '1' || c === '2') {
         const niveaux = await content.getNiveaux();
         session.update(sessionId, { typeContenu: c, niveaux });
@@ -72,9 +78,15 @@ async function handleUSSD(req, res) {
         } else {
           const cours = await content.getCours(mat.id, s.niveauId);
           if (cours) {
-            await sms.envoyerSMS(phoneNumber, cours.version_sms);
-            await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'cours', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: true });
-            reponse = menu.finEnvoiSMS('Cours');
+            try {
+              await sms.envoyerSMS(phoneNumber, cours.version_sms);
+              await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'cours', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: true });
+              reponse = menu.finEnvoiSMS('Cours');
+            } catch (smsErr) {
+              logger.error(`SMS envoi echoue: ${smsErr.message}`);
+              await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'cours', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: false, erreur: smsErr.message });
+              reponse = `END Erreur envoi SMS.\nContenu disponible mais SMS non envoye.\nReessaie plus tard.\nKarambig Roogo`;
+            }
           } else {
             await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'cours_vide', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: false });
             reponse = menu.finAucunContenu('cours');
@@ -103,9 +115,15 @@ async function handleUSSD(req, res) {
         } else {
           const corrige = await content.getCorrige(mat.id, s.niveauId, s.typeCorrige);
           if (corrige) {
-            await sms.envoyerSMS(phoneNumber, corrige.version_sms);
-            await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'corrige', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: true });
-            reponse = menu.finEnvoiSMS('Corrige');
+            try {
+              await sms.envoyerSMS(phoneNumber, corrige.version_sms);
+              await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'corrige', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: true });
+              reponse = menu.finEnvoiSMS('Corrige');
+            } catch (smsErr) {
+              logger.error(`SMS envoi echoue: ${smsErr.message}`);
+              await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'corrige', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: false, erreur: smsErr.message });
+              reponse = `END Erreur envoi SMS.\nContenu disponible mais SMS non envoye.\nReessaie plus tard.\nKarambig Roogo`;
+            }
           } else {
             await content.logSession({ sessionId, telephone: phoneNumber, chemin: text, action: 'corrige_vide', matiereId: mat.id, niveauId: s.niveauId, smsEnvoye: false });
             reponse = menu.finAucunContenu('corrige');
