@@ -6,9 +6,9 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #F5F5F5; }
-    .nav { background: #1B5E20; padding: 16px 24px; display: flex; justify-content: space-between; }
+    .nav { background: #1B5E20; padding: 16px 24px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
     .nav h1 { color: white; font-size: 20px; }
-    .nav a { color: #F9A825; text-decoration: none; }
+    .nav a { color: #F9A825; text-decoration: none; font-size: 14px; }
     .menu { background: #2E7D32; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; }
     .menu a { color: white; text-decoration: none; padding: 6px 16px; border-radius: 20px; font-size: 14px; }
     .menu a:hover, .menu a.active { background: #F9A825; color: #1B5E20; font-weight: bold; }
@@ -18,18 +18,42 @@
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th { background: #1B5E20; color: white; padding: 10px; text-align: left; }
     td { padding: 10px; border-bottom: 1px solid #eee; vertical-align: top; }
-    tr:hover { background: #F5F5F5; }
+    tr:hover { background: #F5F5F5; cursor: pointer; }
     .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
     .badge-attente  { background: #FFF8E1; color: #F9A825; }
     .badge-publiee  { background: #E8F5E9; color: #1B5E20; }
     .badge-rejetee  { background: #FFEBEE; color: #B71C1C; }
-    .btn { padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; display:block; margin-bottom:4px; width:100%; }
+    .btn { padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
     .btn-green  { background: #1B5E20; color: white; }
     .btn-red    { background: #B71C1C; color: white; }
+    .btn-orange { background: #F9A825; color: #1B5E20; }
     textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; height: 80px; resize: vertical; }
     .msg { padding: 12px; border-radius: 8px; margin-bottom: 12px; }
     .msg-success { background: #E8F5E9; color: #1B5E20; }
     .msg-error { background: #FFEBEE; color: #B71C1C; }
+    .clickable-indicator { color: #1B5E20; font-size: 18px; font-weight: bold; margin-right: 8px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+    .modal-content { background: white; margin: 5% auto; padding: 24px; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-close { font-size: 28px; cursor: pointer; color: #757575; }
+    .modal-close:hover { color: #B71C1C; }
+    .modal-label { font-weight: bold; color: #424242; margin-bottom: 4px; }
+    .modal-value { margin-bottom: 12px; color: #212121; }
+    .modal-content-text { background: #F5F5F5; padding: 16px; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+    .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 16px; }
+    .pagination button { padding: 8px 16px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer; }
+    .pagination button:hover { background: #F5F5F5; }
+    .pagination button.active { background: #1B5E20; color: white; border-color: #1B5E20; }
+    
+    @media (max-width: 768px) {
+      .nav { flex-direction: column; text-align: center; }
+      .menu { justify-content: center; }
+      .content { padding: 12px; }
+      .section { padding: 16px; }
+      table { font-size: 12px; }
+      th, td { padding: 6px 4px; }
+      .btn { padding: 6px 10px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>
@@ -52,46 +76,135 @@
       </p>
       <table>
         <thead>
-          <tr><th>Date</th><th>Téléphone</th><th>Matière</th><th>Niveau</th><th>Question</th><th>Statut</th><th>Réponse envoyée</th><th>Actions</th></tr>
+          <tr><th>Date</th><th>Téléphone</th><th>Matière</th><th>Niveau</th><th>Question</th><th>Statut</th><th>Actions</th></tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+
+  <div id="questionsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Détails de la question</h2>
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+      </div>
+      <div id="modalBody"></div>
     </div>
   </div>
   <script>
     let questions = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
     async function init() {
       questions = await fetch('/admin/api/questions').then(r => r.json());
       document.getElementById('total').textContent = questions.length;
+      render();
+    }
+
+    function render() {
+      const totalPages = Math.ceil(questions.length / itemsPerPage);
+      
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
+      const pageItems = questions.slice(start, end);
+
       const tbody = document.getElementById('tbody');
-      tbody.innerHTML = questions.map(q => `
-        <tr id="row-${q.id}">
-          <td style="white-space:nowrap">${new Date(q.created_at).toLocaleDateString('fr-FR')}</td>
+      tbody.innerHTML = pageItems.map(q => `
+        <tr id="row-${q.id}" onclick="showQuestionDetails('${q.id}')">
+          <td style="white-space:nowrap"><span class="clickable-indicator">▶</span>${new Date(q.created_at).toLocaleDateString('fr-FR')}</td>
           <td>${q.telephone}</td>
           <td>${q.matiere || '-'}</td>
           <td>${q.niveau  || '-'}</td>
-          <td><b>${q.contenu}</b></td>
+          <td><b>${q.contenu.substring(0, 50)}${q.contenu.length > 50 ? '...' : ''}</b></td>
           <td><span class="badge badge-${q.statut}">${q.statut}</span></td>
-          <td style="font-size:12px;color:#757575">${q.reponse_sms || '-'}</td>
           <td>
             ${q.statut === 'en_attente' ? `
-              <textarea id="rep-${q.id}" placeholder="Écrire la réponse SMS (max 800 car.)..."></textarea>
-              <button class="btn btn-green" onclick="repondre('${q.id}')">Envoyer SMS</button>
-              <button class="btn btn-red" onclick="rejeter('${q.id}')">Rejeter</button>
-            ` : '—'}
+              <button class="btn btn-green" onclick="event.stopPropagation(); repondre('${q.id}')">Répondre</button>
+              <button class="btn btn-red" style="margin-left:4px" onclick="event.stopPropagation(); rejeter('${q.id}')">Rejeter</button>
+            ` : '<span style="color:#757575;font-size:12px">Traité</span>'}
           </td>
         </tr>
       `).join('');
+
+      renderPagination(totalPages);
     }
-    function showMsg(text, type) {
-      const d = document.getElementById('msg');
-      d.innerHTML = `<div class="msg msg-${type}">${text}</div>`;
-      setTimeout(() => d.innerHTML = '', 5000);
+
+    function renderPagination(totalPages) {
+      const pagination = document.getElementById('pagination');
+      if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+      }
+
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button onclick="goToPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+      }
+      pagination.innerHTML = html;
     }
-    async function repondre(id) {
-      const reponse = document.getElementById(`rep-${id}`)?.value;
+
+    function goToPage(page) {
+      currentPage = page;
+      render();
+    }
+
+    function showQuestionDetails(id) {
+      const q = questions.find(x => x.id === id);
+      if (!q) return;
+      document.getElementById('modalBody').innerHTML = `
+        <div class="modal-label">Date :</div>
+        <div class="modal-value">${new Date(q.created_at).toLocaleString('fr-FR')}</div>
+        
+        <div class="modal-label">Téléphone :</div>
+        <div class="modal-value">${q.telephone}</div>
+        
+        <div class="modal-label">Matière :</div>
+        <div class="modal-value">${q.matiere || '-'}</div>
+        
+        <div class="modal-label">Niveau :</div>
+        <div class="modal-value">${q.niveau || '-'}</div>
+        
+        <div class="modal-label">Question :</div>
+        <div class="modal-content-text">${q.contenu}</div>
+        
+        <div class="modal-label">Statut :</div>
+        <div class="modal-value">${q.statut}</div>
+        
+        ${q.reponse_sms ? `
+          <div class="modal-label">Réponse envoyée :</div>
+          <div class="modal-content-text">${q.reponse_sms}</div>
+        ` : ''}
+        
+        ${q.statut === 'en_attente' ? `
+          <div style="margin-top:16px">
+            <label style="font-weight:bold;color:#424242;margin-bottom:4px;display:block">Réponse SMS :</label>
+            <textarea id="modal-rep-${q.id}" placeholder="Écrire la réponse SMS (max 800 car.)..."></textarea>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-green" onclick="repondreFromModal('${q.id}')">Envoyer SMS</button>
+              <button class="btn btn-red" onclick="rejeter('${q.id}')">Rejeter</button>
+            </div>
+          </div>
+        ` : ''}
+      `;
+      document.getElementById('questionsModal').style.display = 'block';
+    }
+
+    function closeModal() {
+      document.getElementById('questionsModal').style.display = 'none';
+    }
+
+    function repondreFromModal(id) {
+      const reponse = document.getElementById(`modal-rep-${id}`)?.value;
       if (!reponse || reponse.trim() === '') { showMsg('Écrire une réponse avant d\'envoyer.', 'error'); return; }
       if (reponse.length > 800) { showMsg('La réponse ne doit pas dépasser 800 caractères.', 'error'); return; }
+      closeModal();
+      repondreWithResponse(id, reponse);
+    }
+
+    async function repondreWithResponse(id, reponse) {
       const r = await fetch(`/admin/api/questions/${id}/reponse`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reponse })
@@ -100,6 +213,17 @@
       if (data.error) { showMsg('Erreur: ' + data.error, 'error'); return; }
       showMsg('Réponse envoyée par SMS avec succès !', 'success');
       await init();
+    }
+    function showMsg(text, type) {
+      const d = document.getElementById('msg');
+      d.innerHTML = `<div class="msg msg-${type}">${text}</div>`;
+      setTimeout(() => d.innerHTML = '', 5000);
+    }
+    async function repondre(id) {
+      const reponse = prompt('Écrire la réponse SMS (max 800 car.) :');
+      if (!reponse || reponse.trim() === '') { showMsg('Réponse annulée.', 'error'); return; }
+      if (reponse.length > 800) { showMsg('La réponse ne doit pas dépasser 800 caractères.', 'error'); return; }
+      await repondreWithResponse(id, reponse);
     }
     async function rejeter(id) {
       if (!confirm('Rejeter cette question ?')) return;

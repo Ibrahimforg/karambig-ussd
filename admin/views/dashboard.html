@@ -25,6 +25,18 @@
     th { background: #1B5E20; color: white; padding: 10px; text-align: left; }
     td { padding: 10px; border-bottom: 1px solid #eee; }
     tr:hover { background: #F5F5F5; }
+    
+    @media (max-width: 768px) {
+      .nav { flex-direction: column; text-align: center; }
+      .menu { justify-content: center; }
+      .content { padding: 12px; max-width: 100%; }
+      .cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+      .card { padding: 16px; }
+      .card .num { font-size: 28px; }
+      .section { padding: 16px; }
+      table { font-size: 12px; }
+      th, td { padding: 6px 4px; }
+    }
   </style>
 </head>
 <body>

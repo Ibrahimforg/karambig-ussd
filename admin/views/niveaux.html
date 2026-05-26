@@ -38,6 +38,19 @@
     .pagination button { padding: 8px 16px; border: 1px solid #ccc; background: white; border-radius: 6px; cursor: pointer; }
     .pagination button:hover { background: #F5F5F5; }
     .pagination button.active { background: #1B5E20; color: white; border-color: #1B5E20; }
+    
+    @media (max-width: 768px) {
+      .nav { flex-direction: column; text-align: center; }
+      .menu { justify-content: center; }
+      .content { padding: 12px; max-width: 100%; }
+      .section { padding: 16px; }
+      .row { grid-template-columns: 1fr; }
+      .row-2 { grid-template-columns: 1fr; }
+      .row-5 { grid-template-columns: 1fr; }
+      table { font-size: 12px; }
+      th, td { padding: 6px 4px; }
+      .btn { padding: 6px 10px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>
